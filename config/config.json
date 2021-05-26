@@ -1,0 +1,7 @@
+{
+    "user": "smart_auction",
+    "password": "secret_auction",
+    "host": "localhost",
+    "port": 5432,
+    "database": "smart_auction"
+}
