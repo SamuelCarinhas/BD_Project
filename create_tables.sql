@@ -1,72 +1,74 @@
-CREATE TABLE leilao (
-	leilaoid		 BIGINT DEFAULT 0,
-	precominimo	 DOUBLE PRECISION NOT NULL DEFAULT 0,
-	titulo		 VARCHAR(64) UNIQUE NOT NULL,
-	descricao	 VARCHAR(1024),
-	data_fim		 TIMESTAMP NOT NULL,
-	data_criacao	 TIMESTAMP NOT NULL,
-	artigoid		 BIGINT NOT NULL,
-	artigonome	 VARCHAR(64) NOT NULL,
-	utilizador_userid BIGINT NOT NULL DEFAULT 0,
-	PRIMARY KEY(leilaoid)
+CREATE TABLE auctions (
+	auction_id		 		BIGINT DEFAULT 0,
+	min_price	 			DOUBLE PRECISION NOT NULL DEFAULT 0,
+	title		 			VARCHAR(64) UNIQUE NOT NULL,
+	description	 			VARCHAR(1024),
+	end_date		 		TIMESTAMP NOT NULL,
+	creation_date	 		TIMESTAMP NOT NULL,
+	item_id		 		BIGINT NOT NULL,
+	item_name	 			VARCHAR(64) NOT NULL,
+	auctioneer_id 			BIGINT NOT NULL DEFAULT 0,
+	PRIMARY KEY(auction_id)
 );
 
-CREATE TABLE licitacao (
-	licitacaoid	 BIGINT DEFAULT 0,
-	valor		 DOUBLE PRECISION NOT NULL,
-	data		 TIMESTAMP NOT NULL,
-	utilizador_userid BIGINT DEFAULT 0,
-	leilao_leilaoid	 BIGINT DEFAULT 0,
-	PRIMARY KEY(licitacaoid,utilizador_userid,leilao_leilaoid)
+CREATE TABLE biddings (
+	bidding_id	 			BIGINT DEFAULT 0,
+	money		 			DOUBLE PRECISION NOT NULL,
+	date		 			TIMESTAMP NOT NULL,
+	bidder_id 				BIGINT DEFAULT 0,
+	auction_id	 			BIGINT DEFAULT 0,
+	PRIMARY KEY(bidding_id, bidder_id, auction_id)
 );
 
-CREATE TABLE utilizador (
-	userid	 BIGINT DEFAULT 0,
-	email	 VARCHAR(64) UNIQUE NOT NULL,
-	password VARCHAR(32) NOT NULL,
-	username VARCHAR(16) UNIQUE NOT NULL,
-	nome	 VARCHAR(128) NOT NULL,
-	PRIMARY KEY(userid)
+CREATE TABLE users (
+	user_id	 				BIGINT DEFAULT 0,
+	email	 				VARCHAR(64) UNIQUE NOT NULL,
+	password 				VARCHAR(32) NOT NULL,
+	username 				VARCHAR(16) UNIQUE NOT NULL,
+	name	 				VARCHAR(128) NOT NULL,
+	PRIMARY KEY(user_id)
 );
 
-CREATE TABLE mensagem_notificacao_mural (
-	mensagemid			 BIGINT,
-	corpo			 VARCHAR(512) NOT NULL,
-	data				 TIMESTAMP NOT NULL,
-	leilao_leilaoid		 BIGINT NOT NULL DEFAULT 0,
-	utilizador_userid		 BIGINT NOT NULL DEFAULT 0,
-	notificacao_titulo		 VARCHAR(64) NOT NULL,
-	notificacao_corpo		 VARCHAR(512) NOT NULL,
-	notificacao_data_envio	 TIMESTAMP NOT NULL,
-	notificacao_data_visualizacao TIMESTAMP,
-	notificacao_utilizador_userid BIGINT NOT NULL DEFAULT 0
+CREATE TABLE messages (
+	message_id			 	BIGINT,
+	message_body			VARCHAR(512) NOT NULL,
+	date				 	TIMESTAMP NOT NULL,
+	auction_id			 	BIGINT NOT NULL DEFAULT 0,
+	sender_id				BIGINT NOT NULL DEFAULT 0,
+	notif_title				VARCHAR(64) NOT NULL,
+	notif_body				VARCHAR(512) NOT NULL,
+	notif_send_date			TIMESTAMP NOT NULL,
+	notif_received_date		TIMESTAMP,
+	notif_receiver_id		BIGINT NOT NULL DEFAULT 0
+	PRIMARY KEY(message_id)
 );
 
-CREATE TABLE historico (
-	historicoid	 BIGINT,
-	descricao	 VARCHAR(1024),
-	titulo		 VARCHAR(64) NOT NULL,
-	data_alteracao	 TIMESTAMP NOT NULL,
-	leilao_leilaoid BIGINT DEFAULT 0,
-	PRIMARY KEY(historicoid,leilao_leilaoid)
+CREATE TABLE auction_history (
+	history_id	 			BIGINT,
+	description	 			VARCHAR(1024),
+	title		 			VARCHAR(64) NOT NULL,
+	modified_date	 		TIMESTAMP NOT NULL,
+	auction_id 				BIGINT DEFAULT 0,
+	PRIMARY KEY(history_id, auction_id)
 );
 
-CREATE TABLE notificacao_licitacao (
-	leilao_leilaoid		 BIGINT DEFAULT 0,
-	notificacao_titulo		 VARCHAR(64) NOT NULL,
-	notificacao_corpo		 VARCHAR(512) NOT NULL,
-	notificacao_data_envio	 TIMESTAMP NOT NULL,
-	notificacao_data_visualizacao TIMESTAMP,
-	notificacao_utilizador_userid BIGINT NOT NULL DEFAULT 0
+CREATE TABLE bidding_notification (
+	auction_id		 		BIGINT DEFAULT 0,
+	notif_title				VARCHAR(64) NOT NULL,
+	notif_body				VARCHAR(512) NOT NULL,
+	notif_send_date			TIMESTAMP NOT NULL,
+	notif_received_date		TIMESTAMP,
+	notif_receiver_id		BIGINT NOT NULL DEFAULT 0
+	PRIMARY KEY(auction_id)
 );
 
-ALTER TABLE leilao ADD CONSTRAINT leilao_fk1 FOREIGN KEY (utilizador_userid) REFERENCES utilizador(userid);
-ALTER TABLE licitacao ADD CONSTRAINT licitacao_fk1 FOREIGN KEY (utilizador_userid) REFERENCES utilizador(userid);
-ALTER TABLE licitacao ADD CONSTRAINT licitacao_fk2 FOREIGN KEY (leilao_leilaoid) REFERENCES leilao(leilaoid);
-ALTER TABLE mensagem_notificacao_mural ADD CONSTRAINT mensagem_notificacao_mural_fk1 FOREIGN KEY (leilao_leilaoid) REFERENCES leilao(leilaoid);
-ALTER TABLE mensagem_notificacao_mural ADD CONSTRAINT mensagem_notificacao_mural_fk2 FOREIGN KEY (utilizador_userid) REFERENCES utilizador(userid);
-ALTER TABLE mensagem_notificacao_mural ADD CONSTRAINT mensagem_notificacao_mural_fk3 FOREIGN KEY (notificacao_utilizador_userid) REFERENCES utilizador(userid);
-ALTER TABLE historico ADD CONSTRAINT historico_fk1 FOREIGN KEY (leilao_leilaoid) REFERENCES leilao(leilaoid);
-ALTER TABLE notificacao_licitacao ADD CONSTRAINT notificacao_licitacao_fk1 FOREIGN KEY (leilao_leilaoid) REFERENCES leilao(leilaoid);
-ALTER TABLE notificacao_licitacao ADD CONSTRAINT notificacao_licitacao_fk2 FOREIGN KEY (notificacao_utilizador_userid) REFERENCES utilizador(userid);
+ALTER TABLE auctions ADD CONSTRAINT auctions_fk1 FOREIGN KEY (auctioneer_id) REFERENCES users(user_id);
+ALTER TABLE biddings ADD CONSTRAINT biddings_fk1 FOREIGN KEY (bidder_id) REFERENCES users(user_id);
+ALTER TABLE biddings ADD CONSTRAINT biddings_fk2 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
+ALTER TABLE messages ADD CONSTRAINT messages_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
+ALTER TABLE messages ADD CONSTRAINT messages_fk2 FOREIGN KEY (sender_id) REFERENCES users(user_id);
+ALTER TABLE messages ADD CONSTRAINT messages_fk3 FOREIGN KEY (notif_receiver_id) REFERENCES users(user_id);
+ALTER TABLE auction_history ADD CONSTRAINT auction_history_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
+ALTER TABLE bidding_notification ADD CONSTRAINT bidding_notification_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
+ALTER TABLE bidding_notification ADD CONSTRAINT bidding_notification_fk2 FOREIGN KEY (notif_receiver_id) REFERENCES users(user_id);
 
