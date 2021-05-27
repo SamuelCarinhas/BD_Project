@@ -110,7 +110,7 @@ def create_auction(data):
     cursor = connection.cursor() 
 
     statement = """insert into auctions (item_id, min_price, title, description	, auctioneer_id, end_date, creation_date, item_name, item_description) 
-                        values (%s, %s, %s, %s, %s, %s, current_date, %s, %s) returning auction_id"""
+                        values (%s, %s, %s, %s, %s, %s, current_timestamp, %s, %s) returning auction_id"""
     values = (payload['item_id'], payload['min_price'], payload['title'], payload['description'], data['user_id'], payload['end_date'], payload['item_name'], payload['item_description'])
 
     try:
@@ -169,7 +169,7 @@ def get_auction_info(auction_id):
     cursor = connection.cursor()
 
     statement = """select auction_id, description, item_id, item_name, item_description from auctions where auction_id = %s"""
-    statement_messages = """select message_id, message_body, date, sender_id from messages where auction_id = %s"""
+    statement_messages = """select message_id, body, date, sender_id from messages where auction_id = %s"""
     
     values = (auction_id,)
 
@@ -185,7 +185,7 @@ def get_auction_info(auction_id):
 
         messages =  [{
                     'message_id': message_id,
-                    'message_body': message_body,
+                    'body': message_body,
                     'date': date,
                     'sender_id': sender_id
                     } for message_id, message_body, date, sender_id in messages_rows]
@@ -207,8 +207,100 @@ def get_auction_info(auction_id):
     return jsonify(result)
 
 
+@app.route('/dbproj/activity', methods=['GET'])
+@token_required
+def get_user_activity(data):
+    connection = db_connection()
+    cursor = connection.cursor()
+
+    statement = """ select auction_id, description
+                    from auctions
+                    where auctioneer_id = %s
+                    or exists (
+                        select auction_id
+                        from biddings
+                        where
+                        biddings.auction_id = auctions.auction_id
+                        and
+                        biddings.bidder_id = auctions.auctioneer_id
+                    ) """
+    
+    values = (data['user_id'],)
+    
+    try:
+        cursor.execute(statement, values)
+        rows = cursor.fetchall()
+        result = [{'auction_id': int(auction_id), 'description': str(description)} for auction_id, description in rows]
+    except (Exception, psycopg2.DatabaseError) as error:
+        result = {"error": str(error)}
+    finally:
+        if connection is not None:
+            connection.close()
+    
+    return jsonify(result)
+
+
+@app.route('/dbproj/bid/<auction_id>/<bidding_value>', methods = ['GET'])
+@token_required
+def place_bidding(data, auction_id, bidding_value):
+    bidding_value = float(bidding_value)
+
+    connection = db_connection()
+    cursor = connection.cursor()
+    
+    
+    statement_verify =  """
+                        select
+                        coalesce((
+                            select money
+                            from biddings
+                            where bidding_id = auctions.winning_bid)
+                        , min_price)
+                        from auctions
+                        where auction_id = %s
+                        and end_date > current_timestamp
+                        """
+    
+    values_verify = (auction_id,)
+    user_id = data['user_id']
+    # TODO: Colocar um trigger aqui?
+
+    try:
+        cursor.execute(statement_verify, values_verify)
+        rows = cursor.fetchall()
+        if len(rows) == 0:
+            result = {'error': 'Auction not found or has expired'}
+        else:
+            min_bid = float(rows[0][0])
+            if bidding_value > min_bid:
+                statement_insert =  """
+                                    insert into biddings(money, date, bidder_id, auction_id)
+                                    values(%s, current_timestamp, %s, %s) returning bidding_id
+                                    """
+                values_insert = (bidding_value, user_id, auction_id)
+                cursor.execute(statement_insert, values_insert)
+                rows = cursor.fetchall()
+                winning_bid = rows[0][0]
+                statement_update =  """
+                                    update auctions set winning_bid = %s where auctions.auction_id = %s
+                                    """
+                values_update = (winning_bid, auction_id)
+                cursor.execute(statement_update, values_update)
+                cursor.execute('commit')
+                result = {'result': 'Success'}
+            else:
+                result = {'error': 'Invalid bid'}
+    except (Exception, psycopg2.DatabaseError) as error:
+        result = {"error": str(error)}
+    finally:
+        if connection is not None:
+            connection.close()
+
+    return jsonify(result)
+
+
 def main():
-    print('\n-----------------------------------\nSmart Action started\n-----------------------------------')
+    print('\n-----------------------------------\nSmart Action started\n-----------------------------------\n')
     app.run(host="localhost", debug=True, threaded=True)
 
 

@@ -32,11 +32,10 @@ CREATE TABLE users (
 
 CREATE TABLE messages (
 	message_id			 	SERIAL UNIQUE,
-	message_body			VARCHAR(512) NOT NULL,
+	body					VARCHAR(512) NOT NULL,
 	date				 	TIMESTAMP NOT NULL,
 	auction_id			 	BIGINT NOT NULL,
 	sender_id				BIGINT NOT NULL,
-	notification_id			BIGINT NOT NULL,
 	PRIMARY KEY(message_id)
 );
 
@@ -51,7 +50,15 @@ CREATE TABLE auction_history (
 
 CREATE TABLE bidding_notifications (
 	notification_id			BIGINT NOT NULL,
+	bidding_id				BIGINT NOT NULL,
 	auction_id		 		BIGINT NOT NULL,
+	PRIMARY KEY(notification_id)
+);
+
+CREATE TABLE message_notifications (
+	notification_id			BIGINT NOT NULL,
+	message_id				BIGINT NOT NULL,
+	auction_id				BIGINT NOT NULL,
 	PRIMARY KEY(notification_id)
 );
 
@@ -71,11 +78,14 @@ ALTER TABLE biddings ADD CONSTRAINT biddings_fk1 FOREIGN KEY (bidder_id) REFEREN
 ALTER TABLE biddings ADD CONSTRAINT biddings_fk2 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
 ALTER TABLE messages ADD CONSTRAINT messages_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
 ALTER TABLE messages ADD CONSTRAINT messages_fk2 FOREIGN KEY (sender_id) REFERENCES users(user_id);
-ALTER TABLE messages ADD CONSTRAINT messages_fk3 FOREIGN KEY (notification_id) REFERENCES notifications(notification_id);
 ALTER TABLE auction_history ADD CONSTRAINT auction_history_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
 ALTER TABLE bidding_notifications ADD CONSTRAINT bidding_notifications_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
 ALTER TABLE bidding_notifications ADD CONSTRAINT bidding_notifications_fk2 FOREIGN KEY (notification_id) REFERENCES notifications(notification_id);
+ALTER TABLE bidding_notifications ADD CONSTRAINT bidding_notifications_fk3 FOREIGN KEY (bidding_id) REFERENCES biddings(bidding_id);
 ALTER TABLE notifications ADD CONSTRAINT notifications_fk1 FOREIGN KEY (receiver_id) REFERENCES users(user_id);
+ALTER TABLE message_notifications ADD CONSTRAINT message_notifications_fk1 FOREIGN KEY (auction_id) REFERENCES auctions(auction_id);
+ALTER TABLE message_notifications ADD CONSTRAINT message_notifications_fk2 FOREIGN KEY (notification_id) REFERENCES notifications(notification_id);
+ALTER TABLE message_notifications ADD CONSTRAINT message_notifications_fk3 FOREIGN KEY (message_id) REFERENCES messages(message_id);
 
 CREATE INDEX ON auctions ((lower(description)));
 CREATE INDEX ON auctions ((lower(item_name)));
