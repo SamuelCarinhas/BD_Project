@@ -299,6 +299,90 @@ def place_bidding(data, auction_id, bidding_value):
     return jsonify(result)
 
 
+@app.route('/dbproj/auction/<auction_id>', methods=['PUT'])
+@token_required
+def edit_auction(data, auction_id):
+    payload = request.get_json()
+    connection = db_connection()
+    cursor = connection.cursor()
+
+    user_id = data['user_id']
+
+    #TODO:trigger
+    if 'title' in payload and 'description' in payload:
+        statement = """
+                    update auctions set title = %s, description = %s where auction_id = %s and auctioneer_id = %s
+                    returning auction_id, min_price, title, description, end_date, creation_date, item_id, item_name, item_description, auctioneer_id, winning_bid
+                    """
+        values = (payload['title'], payload['description'], auction_id, user_id)
+    elif 'title' in payload:
+        statement = """
+                    update auctions set title = %s where auction_id = %s and auctioneer_id = %s
+                    returning auction_id, min_price, title, description, end_date, creation_date, item_id, item_name, item_description, auctioneer_id, winning_bid
+                    """
+        values = (payload['title'], auction_id, user_id)
+    elif 'description' in payload:
+        statement = """
+                    update auctions set description = %s where auction_id = %s and auctioneer_id = %s
+                    returning auction_id, min_price, title, description, end_date, creation_date, item_id, item_name, item_description, auctioneer_id, winning_bid
+                    """
+        values = (payload['description'], auction_id, user_id)
+    else:
+        return jsonify({'error': 'Invalid payload'})
+
+    try:
+        cursor.execute(statement, values)
+        rows = cursor.fetchall()
+
+        if len(rows) == 0:
+            result = {'error': 'Auction not found or permission denied'}
+        else:
+            cursor.execute('commit')
+            result =  { 'auction_id': rows[0][0], 
+                        'min_price': rows[0][1],
+                        'title': rows[0][2],
+                        'description': rows[0][3],
+                        'end_date': rows[0][4],
+                        'creation_date': rows[0][5],
+                        'item_id': rows[0][6],
+                        'item_name': rows[0][7],
+                        'item_description': rows[0][8],
+                        'auctioneer_id': rows[0][9],
+                        'winning_bid': rows[0][10]}
+    except (Exception, psycopg2.DatabaseError) as error:
+        result = {"error": str(error)}
+    finally:
+        if connection is not None:
+            connection.close()
+
+    return jsonify(result)
+
+
+@app.route('/dbproj/message', methods=['POST'])
+@token_required
+def new_message(data):
+    payload = request.get_json()
+    connection = db_connection()
+    cursor = connection.cursor()
+    user_id = data['user_id']
+    statement = """
+                insert into messages (body, date, auction_id, sender_id) values(%s, current_timestamp, %s, %s) returning message_id
+                """
+    values = (str(payload['body']), str(payload['auction_id']), str(user_id))
+    try:
+        cursor.execute(statement, values)
+        rows = cursor.fetchall()
+        cursor.execute('commit')
+        result = {'message_id': str(rows[0][0])}
+    except (Exception, psycopg2.DatabaseError) as error:
+        result = {"error": str(error)}
+    finally:
+        if connection is not None:
+            connection.close()
+
+    return jsonify(result)
+
+
 def main():
     print('\n-----------------------------------\nSmart Action started\n-----------------------------------\n')
     app.run(host="localhost", debug=True, threaded=True)
