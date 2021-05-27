@@ -110,4 +110,4 @@ for person in persons:
     username = person.lower().replace(' ', '_')
     email = '%s@gmail.com' % (username)
     password = ''.join(random.choice(letters) for i in range(10))
-    print("insert into users(username, email, password, name) values ('%s', '%s', '%s', '%s');" %(username, email, password, person))
+    print("insert into users(username, email, password) values ('%s', '%s', '%s');" %(username, email, password))
