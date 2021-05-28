@@ -170,7 +170,8 @@ def get_auction_info(auction_id):
 
     statement = """select auction_id, description, item_id, item_name, item_description from auctions where auction_id = %s"""
     statement_messages = """select message_id, body, date, sender_id from messages where auction_id = %s"""
-    
+    statement_history = """select description, title, modified_date from auction_history where auction_id = %s"""
+
     values = (auction_id,)
 
     try:
@@ -180,8 +181,8 @@ def get_auction_info(auction_id):
         cursor.execute(statement_messages, values)
         messages_rows = cursor.fetchall()
 
-        print(auction_rows)
-        print(messages_rows)
+        cursor.execute(statement_history, values)
+        history_rows = cursor.fetchall()
 
         messages =  [{
                     'message_id': message_id,
@@ -190,13 +191,20 @@ def get_auction_info(auction_id):
                     'sender_id': sender_id
                     } for message_id, message_body, date, sender_id in messages_rows]
 
+        history =   [{
+                    'description': description,
+                    'title': title,
+                    'modified_date': modified_date
+                    } for description, title, modified_date in history_rows]
+
         result =    [{
                     'auction_id': auction_id,
                     'description': description,
                     'item_id': item_id,
                     'item_name': item_name,
                     'item_description': item_description,
-                    'messages': messages
+                    'messages': messages,
+                    'history': history
                     } for auction_id, description, item_id, item_name, item_description in auction_rows]
     except (Exception, psycopg2.DatabaseError) as error:
         result = {"error": str(error)}
@@ -247,9 +255,24 @@ def place_bidding(data, auction_id, bidding_value):
 
     connection = db_connection()
     cursor = connection.cursor()
+
+    statement_verify_user = """
+                select auctioneer_id
+                from auctions
+                where auction_id = %s
+                """
+   
     
-    
-    statement_verify =  """
+    values_verify = (auction_id,)
+
+    user_id = data['user_id']
+    # TODO: Colocar um trigger aqui?
+
+    try:
+        cursor.execute(statement_verify_user, values_verify)
+        rows = cursor.fetchall()
+        if user_id != rows[0][0]:
+            statement_verify_bid =  """
                         select
                         coalesce((
                             select money
@@ -260,38 +283,35 @@ def place_bidding(data, auction_id, bidding_value):
                         where auction_id = %s
                         and end_date > current_timestamp
                         """
-    
-    values_verify = (auction_id,)
-    user_id = data['user_id']
-    # TODO: Colocar um trigger aqui?
-
-    try:
-        cursor.execute(statement_verify, values_verify)
-        rows = cursor.fetchall()
-        if len(rows) == 0:
-            result = {'error': 'Auction not found or has expired'}
-        else:
-            min_bid = float(rows[0][0])
-            if bidding_value > min_bid:
-                statement_insert =  """
-                                    insert into biddings(money, date, bidder_id, auction_id)
-                                    values(%s, current_timestamp, %s, %s) returning bidding_id
-                                    """
-                values_insert = (bidding_value, user_id, auction_id)
-                cursor.execute(statement_insert, values_insert)
-                rows = cursor.fetchall()
-                winning_bid = rows[0][0]
-                statement_update =  """
-                                    update auctions set winning_bid = %s where auctions.auction_id = %s
-                                    """
-                values_update = (winning_bid, auction_id)
-                cursor.execute(statement_update, values_update)
-                cursor.execute('commit')
-                result = {'result': 'Success'}
+            cursor.execute(statement_verify_bid, values_verify)
+            rows = cursor.fetchall()
+            
+            if len(rows) == 0:
+                result = {'error': 'Auction not found or has expired'}
             else:
-                result = {'error': 'Invalid bid'}
+                min_bid = float(rows[0][0])
+                if bidding_value > min_bid:
+                    statement_insert =  """
+                                        insert into biddings(money, date, bidder_id, auction_id)
+                                        values(%s, current_timestamp, %s, %s) returning bidding_id
+                                        """
+                    values_insert = (bidding_value, user_id, auction_id)
+                    cursor.execute(statement_insert, values_insert)
+                    rows = cursor.fetchall()
+                    winning_bid = rows[0][0]
+                    statement_update =  """
+                                        update auctions set winning_bid = %s where auctions.auction_id = %s
+                                        """
+                    values_update = (winning_bid, auction_id)
+                    cursor.execute(statement_update, values_update)
+                    cursor.execute('commit')
+                    result = {'result': 'Success'}
+                else:
+                    result = {'error': 'Invalid bid'}
+        else:
+            result = {'error': 'The auction owner cannot bid'}
     except (Exception, psycopg2.DatabaseError) as error:
-        result = {"error": str(error)}
+        result = {'error': str(error)}
     finally:
         if connection is not None:
             connection.close()
