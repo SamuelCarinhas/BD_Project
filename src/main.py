@@ -24,6 +24,7 @@ def main():
     app.register_blueprint(views.bid)
     app.register_blueprint(views.message)
     app.register_blueprint(views.user)
+    app.register_blueprint(views.notifications)
 
     print('\n-----------------------------------\nSmart Action started\n-----------------------------------\n')
 

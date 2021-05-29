@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, jsonify
 import jwt
 import datetime
 from functools import wraps

@@ -11,6 +11,7 @@ user = Blueprint('user', __name__, url_prefix='/dbproj/user')
 
 @user.route('', methods=['POST'])
 def create_user():
+
     payload = request.get_json()
 
     connection = db_connection()

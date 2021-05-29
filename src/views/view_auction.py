@@ -29,8 +29,8 @@ def create_auction(data):
     connection = db_connection()
     cursor = connection.cursor() 
 
-    statement = """insert into auctions (item_id, min_price, title, description	, auctioneer_id, end_date, creation_date, item_name, item_description) 
-                        values (%s, %s, %s, %s, %s, %s, current_timestamp, %s, %s) returning auction_id"""
+    statement = """insert into auctions (item_id, min_price, title, description	, auctioneer_id, end_date, creation_date, item_name, item_description, ended) 
+                        values (%s, %s, %s, %s, %s, %s, current_timestamp, %s, %s, false) returning auction_id"""
     values = (payload['item_id'], payload['min_price'], payload['title'], payload['description'], data['user_id'], payload['end_date'], payload['item_name'], payload['item_description'])
 
     try:
@@ -155,6 +155,53 @@ def edit_auction(data, auction_id):
                         'item_description': rows[0][8],
                         'auctioneer_id': int(rows[0][9]),
                         'winning_bid': int(rows[0][10])}
+    except (Exception, psycopg2.DatabaseError) as error:
+        result = {"error": str(error)}
+    finally:
+        if connection is not None:
+            connection.close()
+
+    return jsonify(result)
+
+
+@auction.route('/end', methods=['PUT'])
+def end_auction():
+    connection = db_connection()
+    cursor = connection.cursor()
+    #TODO: ver se funcemina
+    statement = """
+                update auctions set ended = true where end_date < current_timestamp and ended = false returning auction_id, winning_bid, auctioneer_id
+                """
+    
+    statement_insert_winner =   """
+                                insert into notifications (title, body, send_date, receiver_id)
+                                values('AUCTION ENDED', 'Auction %s ended. You had the highest bid =D', current_timestamp, %s)
+                                """
+
+    statement_insert_owner =    """
+                                insert into notifications (title, body, send_date, receiver_id)
+                                values('AUCTION ENDED', 'Your auction %s ended with a highest bid of %s $', current_timestamp, %s)
+                                """
+
+    statement_get_winner =  """
+                            select bidder_id, money from biddings where bidding_id = %s
+                            """
+    try:
+        cursor.execute(statement)
+        rows = cursor.fetchall()
+        if len(rows) > 0:
+            for auction_id, winning_bid, auctioneer_id in rows:
+                money = 0
+                if winning_bid is not None:
+                    cursor.execute(statement_get_winner, (winning_bid,))
+                    winning_bid_data = cursor.fetchall()
+                    winner_id = winning_bid_data[0][0]
+                    money = winning_bid_data[0][1]
+                    cursor.execute(statement_insert_winner, (auction_id, winner_id))
+                cursor.execute(statement_insert_owner, (auction_id, money, auctioneer_id))
+                
+        cursor.execute('commit')
+        result = {"result": "success"}
     except (Exception, psycopg2.DatabaseError) as error:
         result = {"error": str(error)}
     finally:
