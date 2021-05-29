@@ -24,10 +24,11 @@ def get_user_activity(data):
                         where
                         biddings.auction_id = auctions.auction_id
                         and
-                        biddings.bidder_id = auctions.auctioneer_id
+                        biddings.bidder_id = %s
                     ) """
-    
-    values = (data['user_id'],)
+
+
+    values = (data['user_id'], data['user_id'])
     
     try:
         cursor.execute(statement, values)

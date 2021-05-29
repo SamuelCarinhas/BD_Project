@@ -16,6 +16,11 @@ def create_user():
     connection = db_connection()
     cursor = connection.cursor()
 
+    required_values = ['email', 'password', 'username']
+    for value in required_values:
+        if value not in payload:
+            return jsonify({'error': 'Invalid payload arguments'})
+
     statement = """insert into users(email, password, username) values(%s, %s, %s) returning user_id"""
 
     values = (payload['email'], payload['password'], payload['username'])
@@ -38,21 +43,26 @@ def create_user():
 
 @user.route('', methods=['PUT'])
 def authentication_user():
-    content = request.get_json()
+    payload = request.get_json()
+
+    required_values = ['username', 'password']
+    for value in required_values:
+        if value not in payload:
+            return jsonify({'error': 'Invalid payload arguments'})
 
     connection = db_connection()
     cursor = connection.cursor()
 
     statement = """select user_id from users where username = %s and password = %s """
 
-    values = (content['username'], content['password'])
+    values = (payload['username'], payload['password'])
 
     try:
         cursor.execute(statement, values)
-        if cursor.rowcount==0:
+        rows = cursor.fetchall()
+        if len(rows) == 0:
             result = {"error": 'Not found'}
         else:
-            rows = cursor.fetchall()
             user_id = int(rows[0][0])
 
             token = encode_token(user_id)

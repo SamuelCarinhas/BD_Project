@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 import psycopg2
 import sys
+import datetime
 sys.path.append('..')
 from auth.auth_jwt import auth_token
 from database.database import db_connection
@@ -11,6 +12,19 @@ auction = Blueprint('auction', __name__, url_prefix='/dbproj/auction' )
 @auth_token
 def create_auction(data):
     payload = request.get_json()
+    
+    required_values = ['item_id', 'min_price', 'title', 'description', 'end_date', 'item_name', 'item_description']
+    
+    for value in required_values:
+        if value not in payload:
+            return jsonify({'error': 'Invalid payload arguments'})
+
+    try:
+        float(payload['min_price'])
+        datetime.datetime.strptime(payload['end_date'], "%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        print(e)
+        return jsonify({'error': 'Couldn\'t convert the minimum bid price or end date'})
 
     connection = db_connection()
     cursor = connection.cursor() 
@@ -35,6 +49,11 @@ def create_auction(data):
 def get_auction_info(auction_id):
     connection = db_connection()
     cursor = connection.cursor()
+    
+    try:
+        auction_id = int(auction_id)
+    except:
+        return jsonify({'error': 'Couldn\'t convert auction id'})
 
     statement = """select auction_id, description, item_id, item_name, item_description from auctions where auction_id = %s"""
     statement_messages = """select message_id, body, date, sender_id from messages where auction_id = %s"""
@@ -89,6 +108,11 @@ def edit_auction(data, auction_id):
     connection = db_connection()
     cursor = connection.cursor()
 
+    try:
+        auction_id = int(auction_id)
+    except:
+        return jsonify({'error': 'Couldn\'t convert auction id'})
+    
     user_id = data['user_id']
 
     if 'title' in payload and 'description' in payload:
@@ -120,8 +144,8 @@ def edit_auction(data, auction_id):
             result = {'error': 'Auction not found or permission denied'}
         else:
             cursor.execute('commit')
-            result =  { 'auction_id': rows[0][0], 
-                        'min_price': rows[0][1],
+            result =  { 'auction_id': int(rows[0][0]), 
+                        'min_price': float(rows[0][1]),
                         'title': rows[0][2],
                         'description': rows[0][3],
                         'end_date': rows[0][4],
@@ -129,8 +153,8 @@ def edit_auction(data, auction_id):
                         'item_id': rows[0][6],
                         'item_name': rows[0][7],
                         'item_description': rows[0][8],
-                        'auctioneer_id': rows[0][9],
-                        'winning_bid': rows[0][10]}
+                        'auctioneer_id': int(rows[0][9]),
+                        'winning_bid': int(rows[0][10])}
     except (Exception, psycopg2.DatabaseError) as error:
         result = {"error": str(error)}
     finally:

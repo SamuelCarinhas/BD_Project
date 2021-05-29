@@ -11,9 +11,21 @@ message = Blueprint('message', __name__, url_prefix='/dbproj/message')
 @auth_token
 def new_message(data):
     payload = request.get_json()
+
+    required_values = ['body', 'auction_id']
+    
+    for value in required_values:
+        if value not in payload:
+            return jsonify({'error': 'Invalid payload arguments'})
+
     connection = db_connection()
     cursor = connection.cursor()
     user_id = data['user_id']
+
+    try:
+        payload['auction_id'] = int(payload['auction_id'])
+    except:
+        return jsonify({'error': 'Couldn\'t convert auction id'})
     statement = """
                 insert into messages (body, date, auction_id, sender_id) values(%s, current_timestamp, %s, %s) returning message_id
                 """
@@ -22,7 +34,7 @@ def new_message(data):
         cursor.execute(statement, values)
         rows = cursor.fetchall()
         cursor.execute('commit')
-        result = {'message_id': str(rows[0][0])}
+        result = {'message_id': int(rows[0][0])}
     except (Exception, psycopg2.DatabaseError) as error:
         result = {"error": str(error)}
     finally:
