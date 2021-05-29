@@ -79,20 +79,20 @@ execute procedure notify_bidding();
 ---#############################################################################################################################################
 
 ---#############################################################################################################################################
-create or replace function add_history() returning trigger 
+create or replace function add_history() returns trigger 
 language plpgsql as $$
 begin
     insert into auction_history (description, title, modified_date, auction_id)
-        values (old.description, old.title, current_timestamp, old.auction_id)
+        values (old.description, old.title, current_timestamp, old.auction_id);
 
-    return null;
+    return new;
 end;
 $$;
 
----TODO: verificar se funcemina =D
 create trigger add_history_trigger
 after update of title, description
 on auctions
+for each row
 execute procedure add_history();
 ---#############################################################################################################################################
 
