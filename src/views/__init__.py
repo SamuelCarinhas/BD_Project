@@ -1,3 +1,4 @@
+# Import all the blueprints from the current views
 from .view_activity import activity
 from .view_auction import auction
 from .view_auctions import auctions

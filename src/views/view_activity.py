@@ -1,17 +1,25 @@
-from flask import Blueprint, jsonify, request
 import psycopg2
-import sys
-sys.path.append('..')
+from flask import Blueprint, jsonify
 from auth.auth_jwt import auth_token
 from database.database import db_connection
 
 
+# Blueprint with prefix
 activity = Blueprint('activity', __name__, url_prefix='/dbproj/activity')
 
 
 @activity.route('', methods=['GET'])
 @auth_token
 def get_user_activity(data):
+    """
+    ROUTE (GET): /dbproj/activity
+
+    Get auctions where the owner is the user or when the user
+    placed at least one bid
+
+    :param data: Decoded token from auth_token function
+    :return: Auction list, or some error if something went wrong
+    """
     connection = db_connection()
     cursor = connection.cursor()
 
@@ -27,9 +35,9 @@ def get_user_activity(data):
                         biddings.bidder_id = %s
                     ) """
 
-
+    # Values to complete the statement
     values = (data['user_id'], data['user_id'])
-    
+
     try:
         cursor.execute(statement, values)
         rows = cursor.fetchall()
@@ -39,5 +47,5 @@ def get_user_activity(data):
     finally:
         if connection is not None:
             connection.close()
-    
+
     return jsonify(result)
