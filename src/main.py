@@ -1,3 +1,9 @@
+"""
+    :title: Smart Auction Project 
+    :subject: BD 2020/2021
+    :authors: Joana Simoes - 2019217013, Samuel Carinhas - 2019217199
+"""
+
 import json, views
 from flask import Flask
 from database.database import setup_dbconfig

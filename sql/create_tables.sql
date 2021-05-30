@@ -10,7 +10,7 @@ CREATE TABLE auctions (
 	item_description		VARCHAR(1024),
 	auctioneer_id 			BIGINT NOT NULL,
 	winning_bid				BIGINT,
-	ended					BOOLEAN,
+	ended					BOOLEAN NOT NULL,
 	PRIMARY KEY(auction_id)
 );
 

@@ -1,3 +1,9 @@
+"""
+    :title: Smart Auction Project 
+    :subject: BD 2020/2021
+    :authors: Joana Simoes - 2019217013, Samuel Carinhas - 2019217199
+"""
+
 import psycopg2
 from flask import Blueprint, jsonify
 from auth.auth_jwt import auth_token
