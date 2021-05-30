@@ -39,10 +39,16 @@ def get_user_activity(data):
                         biddings.auction_id = auctions.auction_id
                         and
                         biddings.bidder_id = %s
-                    ) """
+                    ) or exists (
+                        select auction_id from messages
+                        where
+                        messages.auction_id = auctions.auction_id
+                        and
+                        sender_id = %s
+                    )"""
 
     # Values to complete the statement
-    values = (data['user_id'], data['user_id'])
+    values = (data['user_id'], data['user_id'], data['user_id'])
 
     try:
         cursor.execute(statement, values)
