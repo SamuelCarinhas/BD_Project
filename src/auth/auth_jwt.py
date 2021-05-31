@@ -4,9 +4,8 @@
     :authors: Joana Simoes - 2019217013, Samuel Carinhas - 2019217199
 """
 
+import bcrypt, jwt, datetime
 from flask import request, jsonify
-import jwt
-import datetime
 from functools import wraps
 
 
@@ -58,3 +57,13 @@ def encode_token(user_id):
     """
     return jwt.encode({'user_id': user_id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)},
                       SECRET_KEY, algorithm="HS256")
+
+
+def generate_hash(password):
+    # https://pypi.org/project/bcrypt/
+    return bcrypt.hashpw(password, bcrypt.gensalt(8))
+
+
+def check_password(password, password_hash):
+    # https://pypi.org/project/bcrypt/
+    return bcrypt.checkpw(password, password_hash)

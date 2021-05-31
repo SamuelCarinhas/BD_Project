@@ -10,7 +10,7 @@ CREATE TABLE auctions (
 	item_description		VARCHAR(1024),
 	auctioneer_id 			BIGINT NOT NULL,
 	winning_bid				BIGINT,
-	ended					BOOLEAN NOT NULL,
+	ended					BOOLEAN NOT NULL DEFAULT FALSE,
 	PRIMARY KEY(auction_id)
 );
 
@@ -26,7 +26,7 @@ CREATE TABLE biddings (
 CREATE TABLE users (
 	user_id	 				SERIAL UNIQUE,
 	email	 				VARCHAR(64) UNIQUE NOT NULL,
-	password 				VARCHAR(32) NOT NULL,
+	password 				VARCHAR(64) NOT NULL,
 	username 				VARCHAR(32) UNIQUE NOT NULL,
 	PRIMARY KEY(user_id)
 );

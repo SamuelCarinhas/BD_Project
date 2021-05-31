@@ -1,3 +1,5 @@
+import bcrypt
+
 persons = [
 'Ebony Herrera',
 'Debra Buchanan',
@@ -106,8 +108,17 @@ import string
 
 letters = string.ascii_lowercase
 
+def generate_hash(password):
+    # https://pypi.org/project/bcrypt/
+    return bcrypt.hashpw(password, bcrypt.gensalt(8))
+
+
+def check_password(password, password_hash):
+    # https://pypi.org/project/bcrypt/
+    return bcrypt.checkpw(password, password_hash)
+
 for person in persons:
     username = person.lower().replace(' ', '_')
     email = '%s@gmail.com' % (username)
     password = ''.join(random.choice(letters) for i in range(10))
-    print("insert into users(username, email, password) values ('%s', '%s', '%s');" %(username, email, password))
+    print("insert into users(username, email, password) values ('%s', '%s', '%s'); --- password = %s" %(username, email, generate_hash(password), password))

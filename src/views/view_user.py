@@ -6,7 +6,7 @@
 
 import psycopg2
 from flask import Blueprint, jsonify, request
-from auth.auth_jwt import encode_token
+from auth.auth_jwt import encode_token, generate_hash, check_password
 from database.database import db_connection
 
 
@@ -39,7 +39,7 @@ def create_user():
     statement = """insert into users(email, password, username) values(%s, %s, %s) returning user_id"""
 
     # Values to complete the statement
-    values = (payload['email'], payload['password'], payload['username'])
+    values = (payload['email'], generate_hash(payload['password']), payload['username'])
 
     try:
         cursor.execute(statement, values)
@@ -80,10 +80,10 @@ def authentication_user():
     connection = db_connection()
     cursor = connection.cursor()
 
-    statement = """select user_id from users where username = %s and password = %s """
+    statement = """select user_id, password from users where username = %s """
 
     # Values to complete the statement
-    values = (payload['username'], payload['password'])
+    values = (payload['username'],)
 
     try:
         cursor.execute(statement, values)
@@ -91,14 +91,16 @@ def authentication_user():
 
         # Check if the user and the password were correct
         if len(rows) == 0:
-            result = {"error": 'Incorrect username or password'}
+            result = {"error": 'Username not found'}
         else:
             user_id = int(rows[0][0])
-            
-            token = encode_token(user_id)
-            
-            result = {"auth_token": token}
+            hash_password = rows[0][1]
 
+            if check_password(payload['password'], hash_password):
+                token = encode_token(user_id)
+                result = {"auth_token": token}
+            else:
+                result = {"error": 'Wrong password'}
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         result = {"error": str(error)}
